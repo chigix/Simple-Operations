@@ -1,0 +1,55 @@
+---
+title: "Database Operations"
+author: "Richard Lea <https://github.com/chigix>"
+date: "2019/3/23"
+output: html_document
+---
+
+```{r}
+con <- DBI::dbConnect(
+  RMariaDB::MariaDB(),
+  host = "127.0.0.1",
+  user = "root",
+  password = "###",
+  dbname = "db_name_1"
+)
+DBI::dbExecute(con, "SET NAMES utf8")
+con_new <- DBI::dbConnect(
+  RMariaDB::MariaDB(),
+  host="127.0.0.1",
+  user="root",
+  password = "###",
+  dbname = "db_name_2"
+)
+DBI::dbExecute(con_new, "SET NAMES utf8")
+DBI::dbWriteTable(con_new, "user", users, append=TRUE)
+DBI::dbWriteTable(con_new, "group", groups, append=TRUE)
+DBI::dbWriteTable(con_new, "sub_user_group", subscriptions, append=TRUE)
+```
+
+```{r}
+users_original <- dplyr::tbl(con, "user")
+head(users_original)
+groups_original <- dplyr::tbl(con, "group")
+groups_original
+```
+
+```{r}
+(cards <- cards_original %>% 
+  # head() %>%
+  transmute(
+    uuid = uuid, title = title, updated_at = created_at
+  ))
+(
+  subscriptions <- cards_original %>%
+    left_join(mutate(groups_original, group_id=id), by="group_id") %>%
+    transmute(
+      user=`uuid.x`,
+      group=`uuid.y`,
+      created_at=`created_at.x`,
+      updated_at=`updated_at.x`,
+      status=1
+    )
+)
+```
+
